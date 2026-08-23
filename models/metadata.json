@@ -1,0 +1,67 @@
+{
+  "model": "RandomForestClassifier",
+  "task": "stage1_suitability_binary",
+  "accuracy": 0.7667,
+  "macro_f1": 0.758,
+  "n_classes": 20,
+  "n_samples": 360,
+  "features": {
+    "numeric": [
+      "N",
+      "P",
+      "K",
+      "ph",
+      "organic_carbon",
+      "avg_temp_c",
+      "total_rainfall_mm",
+      "avg_humidity_pct",
+      "kharif_rain",
+      "kharif_temp",
+      "rabi_rain",
+      "rabi_temp",
+      "n_ideal_soils",
+      "temp_mid",
+      "rain_lo",
+      "rain_hi",
+      "water_ordinal"
+    ],
+    "categorical": [
+      "soil_type",
+      "season"
+    ]
+  },
+  "trained_at": "2026-08-23T09:49:22.559928+00:00",
+  "yield_rmse": 0.3337,
+  "yield_mae": 0.1301,
+  "yield_features": [
+    "crop_name",
+    "soil_type",
+    "season",
+    "water_requirement",
+    "N",
+    "P",
+    "K",
+    "ph",
+    "organic_carbon",
+    "avg_temp_c",
+    "total_rainfall_mm",
+    "kharif_rain",
+    "rabi_rain",
+    "area_acre",
+    "year_idx"
+  ],
+  "price_rmse": 135.67,
+  "price_mae": 94.97,
+  "price_features": [
+    "crop_name",
+    "state",
+    "lag1",
+    "lag2",
+    "lag3",
+    "mom_change",
+    "month_sin",
+    "month_cos",
+    "year_idx"
+  ],
+  "roc_auc": 0.819
+}

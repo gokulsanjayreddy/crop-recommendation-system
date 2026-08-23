@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+
+# Generated artifacts (regenerate with generate.py / training scripts)
+data/*.csv
+models/*.pkl
+
+# Local databases
+backend/app.db
+*.db
+
+# Logs / temp
+*.log
+*.err
+
+# Node (unused Vite scaffold kept for reference)
+frontend/node_modules/
+frontend/dist/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

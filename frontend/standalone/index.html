@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Crop Recommendation System</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', system-ui, sans-serif; color: #1f2937;
+         background: linear-gradient(#f0fdf4, #fffbeb); min-height: 100vh; }
+  header { background: #15803d; color: #fff; padding: 22px 16px; }
+  header h1 { font-size: 26px; }
+  header p { color: #bbf7d0; margin-top: 4px; font-size: 15px; }
+  main { max-width: 1000px; margin: 0 auto; padding: 24px 16px; }
+  section { background: #fff; border: 1px solid #e5e7eb; border-radius: 12px;
+            padding: 20px; margin-bottom: 24px; box-shadow: 0 1px 3px rgba(0,0,0,.06); }
+  h2 { color: #166534; font-size: 18px; margin-bottom: 14px; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  @media (max-width: 640px) { .grid { grid-template-columns: 1fr; } }
+  label { display: block; font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 4px; }
+  input, select { width: 100%; padding: 9px 11px; border: 1px solid #d1d5db;
+                  border-radius: 8px; font-size: 14px; background: #fff; }
+  input:focus, select:focus { outline: none; border-color: #22c55e; box-shadow: 0 0 0 2px #bbf7d0; }
+  .toggle { display: flex; border: 1px solid #d1d5db; border-radius: 8px; overflow: hidden; }
+  .toggle button { flex: 1; padding: 9px; border: 0; background: #fff; cursor: pointer;
+                   font-size: 14px; font-weight: 600; color: #4b5563; }
+  .toggle button.on-profit { background: #16a34a; color: #fff; }
+  .toggle button.on-loss { background: #ef4444; color: #fff; }
+  .btn-main { background: #15803d; color: #fff; font-weight: 700; font-size: 15px;
+              padding: 11px 28px; border: 0; border-radius: 8px; cursor: pointer; margin-top: 6px; }
+  .btn-main:hover { background: #166534; }
+  .btn-main:disabled { opacity: .5; cursor: default; }
+  .btn-small { background: #f59e0b; color: #fff; font-weight: 600; font-size: 13px;
+               padding: 8px 14px; border: 0; border-radius: 8px; cursor: pointer; }
+  .btn-view { background: #15803d; }
+  .hint { color: #16a34a; font-size: 12px; font-weight: 400; }
+  .err { background: #fef2f2; border: 1px solid #fecaca; color: #b91c1c;
+         padding: 10px; border-radius: 8px; font-size: 14px; margin-top: 10px; }
+  .cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+  @media (max-width: 800px) { .cards { grid-template-columns: 1fr; } }
+  .card { background: #fff; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 6px rgba(0,0,0,.08); }
+  .card .bar { color: #fff; font-size: 11px; font-weight: 800; text-transform: uppercase;
+               letter-spacing: .5px; padding: 6px 16px; }
+  .card.r1 { outline: 3px solid #fbbf24; } .card.r1 .bar { background: linear-gradient(90deg,#f59e0b,#fbbf24); }
+  .card.r2 { outline: 2px solid #9ca3af; } .card.r2 .bar { background: linear-gradient(90deg,#9ca3af,#b5b9c1); }
+  .card.r3 { outline: 2px solid #fb923c; } .card.r3 .bar { background: linear-gradient(90deg,#fb923c,#fdba74); }
+  .card .inner { padding: 16px; }
+  .crop-name { font-size: 20px; font-weight: 800; color: #166534; }
+  .profit { font-size: 21px; font-weight: 800; text-align: right; color: #15803d; }
+  .profit small { display: block; font-size: 11px; color: #6b7280; font-weight: 400; }
+  .row-between { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+  .why-btn { background: none; border: 0; color: #15803d; font-size: 13px; font-weight: 600;
+             text-decoration: underline; cursor: pointer; margin-top: 10px; padding: 0; }
+  .reason { background: #fffbeb; border: 1px solid #fde68a; color: #4b5563;
+            font-size: 13px; padding: 10px; border-radius: 8px; margin-top: 10px; line-height: 1.45; }
+  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 10px; text-align: center; font-size: 12px; }
+  .stats div { background: #f9fafb; border-radius: 8px; padding: 8px; }
+  .stats span { color: #6b7280; font-size: 10px; letter-spacing: .5px; display: block; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { text-align: left; text-transform: uppercase; font-size: 11px; color: #6b7280;
+       border-bottom: 1px solid #e5e7eb; padding: 8px 10px 8px 0; }
+  td { padding: 8px 10px 8px 0; border-bottom: 1px solid #f3f4f6; }
+  .pill { padding: 2px 9px; border-radius: 99px; font-size: 11px; font-weight: 700; }
+  .pill.profit { background: #dcfce7; color: #15803d; }
+  .pill.loss { background: #fee2e2; color: #b91c1c; }
+  .muted { color: #9ca3af; font-size: 14px; }
+  footer { max-width: 1000px; margin: 0 auto; padding: 0 16px 24px; color: #9ca3af; font-size: 12px; }
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <h1>AI Crop Recommendation System</h1>
+    <p>Decide the most profitable crop to sow next season &mdash; ranked by predicted net profit per acre.</p>
+  </div>
+</header>
+
+<main>
+  <section id="loading-note"><span class="muted">Loading...</span></section>
+
+  <section id="form-section" style="display:none">
+    <h2>Your farm details</h2>
+    <form id="form" class="grid">
+      <div style="position:relative"><label>Farmer name</label><input id="farmerId" autocomplete="off" placeholder="Type letters to search farmers...">
+        <div id="farmerList"></div></div>
+      <div><label>State</label><select id="state" required><option value="">Select state...</option></select></div>
+      <div><label>District</label><select id="district" required><option value="">Select district...</option></select></div>
+      <div><label>Soil type <span id="soilHint" class="hint"></span></label><select id="soilType" required><option value="">Select soil...</option></select></div>
+      <div style="position:relative"><label>Previous crop</label><input id="prevCrop" autocomplete="off" placeholder="Type to search crops..." required>
+        <div id="cropList"></div></div>
+      <div><label>Last season outcome</label>
+        <div class="toggle">
+          <button type="button" id="btnProfit">Profit</button>
+          <button type="button" id="btnLoss">Loss</button>
+        </div></div>
+      <div style="grid-column:1/-1"><label>Approximate margin last season (Rs/acre, optional)</label>
+        <input id="amount" type="number" step="any" placeholder="e.g. -3200 for a loss, 18500 for a profit"></div>
+      <div style="grid-column:1/-1"><button type="submit" class="btn-main" id="submitBtn">Get Top-3 Crop Recommendations</button>
+        <div id="formErr"></div></div>
+    </form>
+  </section>
+
+  <section id="results-section" style="display:none">
+    <h2>Recommended crops for next season</h2>
+    <div id="resultsTime" class="muted" style="font-size:12px;margin-bottom:10px"></div>
+    <div id="resultsCards" class="cards"></div>
+  </section>
+
+  <section>
+    <div style="display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:10px;margin-bottom:12px">
+      <h2 style="margin-bottom:0">Season history</h2>
+      <div style="display:flex;gap:8px">
+        <input id="histId" placeholder="Farmer ID e.g. F1001" style="width:150px">
+        <button type="button" class="btn-small btn-view" onclick="loadHistory(document.getElementById('histId').value.trim())">View</button>
+        <button type="button" class="btn-small" id="logBtn" style="display:none" onclick="logThisSeason()">Log this season</button>
+      </div>
+    </div>
+    <div id="historyBody" class="muted">Enter a Farmer ID to view logged seasons.</div>
+  </section>
+</main>
+
+<footer>Demo only - soil, weather and market data are synthetically generated.
+Swap in Soil Health Card, IMD and Agmarknet feeds for production use.</footer>
+
+<script src="/app.js?v=3"></script>
+</body>
+</html>
