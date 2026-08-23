@@ -9,6 +9,52 @@ cultivation, net profit per acre and a plain-language reason.
 > generated for demo purposes** - it is not real government data. Swap in real
 > sources for production (see [Real data sources](#real-data-sources-for-production)).
 
+> **Prototype notice:** this project is a **working prototype** built to
+> demonstrate the end-to-end architecture (synthetic data -> ML training ->
+> ranking API -> UI). The numbers it produces are illustrative only and should
+> not be used for real farming decisions.
+
+## Data exploration (generated charts)
+
+Run `python ml/visualize_data.py` (needs `matplotlib` + `seaborn`, both in
+`requirements.txt`) to regenerate all charts into `reports/`. The six charts
+below summarize the synthetic dataset used to train the models.
+
+### 1. Season outcomes
+Profit/loss balance across all simulated farmer seasons, and profit rate per
+crop family (pulses and oilseeds are structurally riskier in this dataset).
+
+![Outcomes](reports/01_outcomes.png)
+
+### 2. Yield distribution
+Spread of yields per crop (log scale) - the signal the Stage 2a regressor learns.
+
+![Yields](reports/02_yield_distribution.png)
+
+### 3. Climate normals
+Monthly rainfall and temperature per representative district; the Jun-Sep
+monsoon drives Kharif vs Rabi suitability.
+
+![Climate](reports/03_climate_normals.png)
+
+### 4. Market price trends
+Three years of synthetic mandi prices with seasonal dips at harvest and mild
+year-over-year inflation - the signal the Stage 2b price forecaster learns.
+
+![Prices](reports/04_price_trends.png)
+
+### 5. Economics
+Expected revenue vs cost of cultivation per acre - the basis of the profit
+ranking. Sugarcane dominates gross revenue; several crops hover near break-even,
+which is why the profit/loss labels are balanced.
+
+![Economics](reports/05_economics.png)
+
+### 6. Feature correlations
+Soil nutrients, climate and yield correlations used by the models.
+
+![Correlations](reports/06_correlations.png)
+
 ## Quick start
 
 ```bash
@@ -117,6 +163,7 @@ crop-recommendation-system/
 |-- backend/                    FastAPI app (routers, db, inference)
 `-- frontend/standalone/        single-file React + Tailwind UI
 ```
+plus `reports/` - generated EDA charts (embedded in the section above).
 
 ## Real data sources (for production)
 
