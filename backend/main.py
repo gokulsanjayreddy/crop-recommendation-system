@@ -7,9 +7,9 @@ from fastapi.staticfiles import StaticFiles
 
 from backend.routers import recommend, history, meta
 from backend.routers.history import seed_from_csv
+from backend.config import settings
 
-FRONTEND_DIR = os.path.join(os.path.dirname(os.path.dirname(
-    os.path.abspath(__file__))), "frontend", "standalone")
+FRONTEND_DIR = str(settings.FRONTEND_DIR)
 
 
 @asynccontextmanager

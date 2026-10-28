@@ -1,10 +1,9 @@
-"""SQLite persistence (dev) via SQLAlchemy - swap-ready for Postgres."""
-import os
 from sqlalchemy import create_engine, Column, Integer, String, Float
 from sqlalchemy.orm import declarative_base, sessionmaker
+from backend.config import settings
 
-DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "app.db")
-engine = create_engine(f"sqlite:///{DB_PATH}", connect_args={"check_same_thread": False})
+connect_args = {"check_same_thread": False} if settings.DATABASE_URL.startswith("sqlite") else {}
+engine = create_engine(settings.DATABASE_URL, connect_args=connect_args)
 SessionLocal = sessionmaker(bind=engine, autoflush=False)
 Base = declarative_base()
 

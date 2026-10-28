@@ -1,6 +1,6 @@
 from fastapi import APIRouter
-import os
 import pandas as pd
+from backend.config import settings
 from backend.inference import get_ranker
 
 router = APIRouter()
@@ -9,8 +9,7 @@ router = APIRouter()
 @router.get("/api/farmers")
 def farmers():
     """All known farmers with names - powers the name autocomplete."""
-    path = os.path.join(os.path.dirname(os.path.dirname(
-        os.path.dirname(os.path.abspath(__file__)))), "data", "farmers.csv")
+    path = settings.DATA_DIR / "farmers.csv"
     df = pd.read_csv(path)
     return df.to_dict(orient="records")
 
