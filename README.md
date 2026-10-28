@@ -14,6 +14,23 @@ cultivation, net profit per acre and a plain-language reason.
 > ranking API -> UI). The numbers it produces are illustrative only and should
 > not be used for real farming decisions.
 
+## Migration status
+
+We are migrating the crop recommendation system step by step from synthetic demo data to real, key-free public data for all of Andhra Pradesh, with history from 2010.
+
+- [x] **Chunk 01: Housekeeping & Configuration** - Branch `chunk-01-housekeeping`, `backend/config.py` using `pydantic-settings` (`DATABASE_URL`, `MODEL_DIR`, timeouts), `.env.example`, `.gitignore` entries for `.env` and local DB files, pytest test suite with FastAPI `TestClient` for `/api/meta` and `/api/recommend`.
+- [ ] **Chunk 02: PostgreSQL & SQLAlchemy 2 Setup** - PostgreSQL connection configuration, SQLAlchemy 2 models and migration setup.
+- [ ] **Chunk 03: Andhra Pradesh Spatial & Geocoding Grid** - Geocoding and spatial reference mapping for all Andhra Pradesh districts and mandals.
+- [ ] **Chunk 04: ISRIC SoilGrids Integration** - Fetching real soil properties (pH, organic carbon, clay, sand) via key-free ISRIC SoilGrids REST API.
+- [ ] **Chunk 05: Historical Climate Data (2010–Present)** - Historical climate series ingestion via Open-Meteo Archive / NASA POWER APIs.
+- [ ] **Chunk 06: Weather Forecasting Integration** - Ingesting upcoming seasonal weather forecasts via Open-Meteo Forecast API.
+- [ ] **Chunk 07: Market Price & Mandi Trends** - Ingestion of historical mandi prices and cost of cultivation for Andhra Pradesh crops.
+- [ ] **Chunk 08: Unified Feature Engineering Pipeline** - Transforming and merging real soil, climate, and mandi price data from 2010 into model features.
+- [ ] **Chunk 09: Model Retraining - Stage 1 (Agro-Climatic Suitability)** - Train and evaluate binary suitability model on real Andhra Pradesh data.
+- [ ] **Chunk 10: Model Retraining - Stage 2a (Yield Prediction)** - Train and evaluate yield regression model on Andhra Pradesh harvest history.
+- [ ] **Chunk 11: Model Retraining - Stage 2b (Market Price Forecasting)** - Train and evaluate price forecasting model on real mandi price trends.
+- [ ] **Chunk 12: End-to-End System Integration & UI Verification** - Full system verification, Andhra Pradesh district selector integration, and deployment validation.
+
 ## Data exploration (generated charts)
 
 Run `python ml/visualize_data.py` (needs `matplotlib` + `seaborn`, both in
@@ -95,10 +112,11 @@ the frontend must be served by the backend so it can call `/api/*`.)
 +----------------------------------------------------------------------+
 | 3. BACKEND / API LAYER (FastAPI)                                     |
 |    backend/main.py            app entrypoint, serves frontend at "/" |
+|    backend/config.py          pydantic-settings (DB, model dir, timeouts) |
 |    backend/routers/recommend.py  POST /api/recommend                 |
 |    backend/routers/history.py    GET/POST /api/history               |
 |    backend/routers/meta.py       GET /api/meta                       |
-|    backend/db.py              SQLite via SQLAlchemy (Postgres-ready) |
+|    backend/db.py              SQLite / Postgres persistence          |
 |    backend/inference.py       loads models once at startup           |
 +----------------------------------------------------------------------+
 | 4. FRONTEND LAYER                                                    |
@@ -155,12 +173,14 @@ Interactive docs: http://127.0.0.1:8000/docs
 crop-recommendation-system/
 |-- README.md
 |-- requirements.txt
+|-- .env.example                configuration template
 |-- run.bat                     one-click launcher (Windows)
+|-- tests/                      pytest test suite (FastAPI TestClient)
 |-- synthetic_data_generator/generate.py
 |-- data/                       generated CSVs
 |-- ml/                         features + training + ranking pipeline
 |-- models/                     trained artifacts + metadata.json
-|-- backend/                    FastAPI app (routers, db, inference)
+|-- backend/                    FastAPI app (routers, db, inference, config)
 `-- frontend/standalone/        single-file React + Tailwind UI
 ```
 plus `reports/` - generated EDA charts (embedded in the section above).

@@ -3,6 +3,7 @@ import os
 import pandas as pd
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
+from backend.config import settings
 from backend.db import SessionLocal, SeasonLog, engine, Base
 from backend.schemas import SeasonLogIn, SeasonLogOut
 
@@ -39,9 +40,7 @@ def seed_from_csv():
     try:
         if db.query(SeasonLog).count() > 0:
             return
-        root = os.path.dirname(os.path.dirname(os.path.dirname(
-            os.path.abspath(__file__))))
-        path = os.path.join(root, "data", "farmer_seasons.csv")
+        path = settings.DATA_DIR / "farmer_seasons.csv"
         df = pd.read_csv(path).fillna({"previous_crop": "",
                                        "profit_amount_rs_per_acre": None})
         rows = [SeasonLog(farmer_id=str(r["farmer_id"]),

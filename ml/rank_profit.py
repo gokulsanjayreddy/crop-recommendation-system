@@ -10,20 +10,26 @@ from datetime import datetime
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from features import load_data, _location_context  # noqa: E402
 
-MODELS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "models")
+try:
+    from backend.config import settings
+    MODELS_DIR = str(settings.MODEL_DIR)
+except Exception:
+    MODELS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "models")
+
 ROTATION_PENALTY = 0.85      # multiply profit when repeating a crop family
 PERSONALIZATION_BONUS = 0.05 # +/-5% for crops this farmer profited/lost before
 TOP_K_SHORTLIST = 8
 
 
 class Ranker:
-    def __init__(self):
-        self.data = load_data()
+    def __init__(self, model_dir=None, data_dir=None):
+        self.model_dir = str(model_dir or MODELS_DIR)
+        self.data = load_data(data_dir=data_dir)
         self.ctx = _location_context(self.data)
         self.master = self.data["crop_master"]
-        self.suitability = joblib.load(os.path.join(MODELS_DIR, "suitability.pkl"))
-        self.yield_model = joblib.load(os.path.join(MODELS_DIR, "yield.pkl"))
-        self.price_model = joblib.load(os.path.join(MODELS_DIR, "price.pkl"))
+        self.suitability = joblib.load(os.path.join(self.model_dir, "suitability.pkl"))
+        self.yield_model = joblib.load(os.path.join(self.model_dir, "yield.pkl"))
+        self.price_model = joblib.load(os.path.join(self.model_dir, "price.pkl"))
 
     def _location_row(self, district):
         row = self.ctx[self.ctx["district"] == district]
