@@ -14,9 +14,9 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
-    # Database connection URL (defaults to local SQLite app.db, postgresql-ready)
+    # Database connection URL (default PostgreSQL, SQLite fallback for tests)
     DATABASE_URL: str = Field(
-        default_factory=lambda: f"sqlite:///{(Path(__file__).resolve().parent / 'app.db').as_posix()}",
+        default="postgresql://postgres:postgres@localhost:5432/crop_db",
         description="SQLAlchemy database connection URL",
     )
 

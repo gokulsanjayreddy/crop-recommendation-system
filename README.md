@@ -19,7 +19,7 @@ cultivation, net profit per acre and a plain-language reason.
 We are migrating the crop recommendation system step by step from synthetic demo data to real, key-free public data for all of Andhra Pradesh, with history from 2010.
 
 - [x] **Chunk 01: Housekeeping & Configuration** - Branch `chunk-01-housekeeping`, `backend/config.py` using `pydantic-settings` (`DATABASE_URL`, `MODEL_DIR`, timeouts), `.env.example`, `.gitignore` entries for `.env` and local DB files, pytest test suite with FastAPI `TestClient` for `/api/meta` and `/api/recommend`.
-- [ ] **Chunk 02: PostgreSQL & SQLAlchemy 2 Setup** - PostgreSQL connection configuration, SQLAlchemy 2 models and migration setup.
+- [x] **Chunk 02: PostgreSQL & SQLAlchemy 2 Setup** - PostgreSQL 16 container via `docker-compose.yml`, `psycopg2-binary` driver, `backend/db.py` reading `DATABASE_URL` (default PostgreSQL, SQLite fallback for tests), idempotent CSV seeding of farmer history, and `/api/history` verification for both backends.
 - [ ] **Chunk 03: Andhra Pradesh Spatial & Geocoding Grid** - Geocoding and spatial reference mapping for all Andhra Pradesh districts and mandals.
 - [ ] **Chunk 04: ISRIC SoilGrids Integration** - Fetching real soil properties (pH, organic carbon, clay, sand) via key-free ISRIC SoilGrids REST API.
 - [ ] **Chunk 05: Historical Climate Data (2010–Present)** - Historical climate series ingestion via Open-Meteo Archive / NASA POWER APIs.
@@ -77,6 +77,9 @@ Soil nutrients, climate and yield correlations used by the models.
 ```bash
 pip install -r requirements.txt
 
+# Start PostgreSQL 16 container (default database for app)
+docker compose up -d
+
 python synthetic_data_generator/generate.py   # 1. generate CSVs into data/
 python ml/train_suitability.py                # 2. train Stage 1
 python ml/train_yield.py                      # 3. train yield model
@@ -90,6 +93,62 @@ python -m uvicorn backend.main:app --port 8000
 Then open **http://127.0.0.1:8000** in your browser.
 (Opening `frontend/standalone/index.html` directly from disk will NOT work -
 the frontend must be served by the backend so it can call `/api/*`.)
+
+## Database & Docker Setup
+
+The application supports both PostgreSQL (default for production/Docker) and SQLite (automatic fallback for unit tests and lightweight local development).
+
+### 1. Run PostgreSQL with Docker Compose
+
+Start the PostgreSQL 16 container:
+```bash
+docker compose up -d
+```
+
+Check container status:
+```bash
+docker compose ps
+```
+
+Stop the database container:
+```bash
+docker compose down
+```
+
+### 2. Database Connection URL
+
+The database connection is configured via `DATABASE_URL` in `backend/config.py` and `backend/db.py`:
+- **Default (PostgreSQL):** `postgresql://postgres:postgres@localhost:5432/crop_db`
+- **Fallback (SQLite):** `sqlite:///backend/app.db` (used automatically during `pytest`)
+
+To run the backend with SQLite instead of PostgreSQL:
+```bash
+# Linux / macOS
+DATABASE_URL=sqlite:///backend/app.db python -m uvicorn backend.main:app --port 8000
+
+# Windows PowerShell
+$env:DATABASE_URL="sqlite:///backend/app.db"; python -m uvicorn backend.main:app --port 8000
+```
+
+### 3. Running Tests
+
+Tests run against SQLite by default:
+```bash
+pytest
+```
+
+To run tests against PostgreSQL running in Docker:
+```bash
+# Linux / macOS
+DATABASE_URL=postgresql://postgres:postgres@localhost:5432/crop_db pytest
+
+# Windows PowerShell
+$env:DATABASE_URL="postgresql://postgres:postgres@localhost:5432/crop_db"; pytest
+```
+
+### 4. Farmer History Seeding
+
+On startup, `backend/routers/history.py` seeds farmer history from `data/farmer_seasons.csv` into the active database idempotently (if `season_logs` table has records, seeding is skipped). Works identically on both PostgreSQL and SQLite.
 
 ## Architecture
 
@@ -172,6 +231,7 @@ Interactive docs: http://127.0.0.1:8000/docs
 ```
 crop-recommendation-system/
 |-- README.md
+|-- docker-compose.yml          PostgreSQL 16 service definition
 |-- requirements.txt
 |-- .env.example                configuration template
 |-- run.bat                     one-click launcher (Windows)
