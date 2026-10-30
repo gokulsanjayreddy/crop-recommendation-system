@@ -33,10 +33,12 @@ def log_season(log: SeasonLogIn, db: Session = Depends(get_db)):
     return row
 
 
-def seed_from_csv():
-    """Load farmer_seasons.csv into SQLite once (idempotent)."""
-    Base.metadata.create_all(engine)
-    db = SessionLocal()
+def seed_from_csv(target_engine=None, session_factory=None):
+    """Load farmer_seasons.csv into database once (idempotent)."""
+    eng = target_engine or engine
+    session_cls = session_factory or SessionLocal
+    Base.metadata.create_all(eng)
+    db = session_cls()
     try:
         if db.query(SeasonLog).count() > 0:
             return
