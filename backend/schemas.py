@@ -44,3 +44,12 @@ class SeasonLogIn(BaseModel):
 class SeasonLogOut(SeasonLogIn):
     id: int
     model_config = ConfigDict(from_attributes=True)
+
+
+class DistrictOut(BaseModel):
+    id: Optional[int] = None
+    district: str
+    lat: float
+    lon: float
+    source: str = "open-meteo"
+    model_config = ConfigDict(from_attributes=True)

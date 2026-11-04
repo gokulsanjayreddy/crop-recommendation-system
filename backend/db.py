@@ -67,6 +67,15 @@ class SeasonLog(Base):
     next_crop_sown = Column(String(64))
 
 
+class ReferencePoint(Base):
+    __tablename__ = "reference_points"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    district = Column(String(64), unique=True, index=True, nullable=False)
+    lat = Column(Float, nullable=False)
+    lon = Column(Float, nullable=False)
+    source = Column(String(64), default="open-meteo", nullable=False)
+
+
 def init_db(target_engine=None):
     Base.metadata.create_all(target_engine or engine)
 
