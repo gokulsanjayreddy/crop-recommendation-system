@@ -300,3 +300,119 @@ def test_mocked_http_nasa_power_and_soilgrids():
         layers = soil_resp.json()["properties"]["layers"]
         assert len(layers) == 2
         assert layers[0]["name"] == "phh2o"
+
+
+def test_reference_points_schema_ddl():
+    """Verify ReferencePoint DDL compiles for both SQLite and PostgreSQL dialects (SQLAlchemy 2)."""
+    from sqlalchemy.schema import CreateTable
+    from sqlalchemy.dialects import postgresql, sqlite
+    from backend.db import ReferencePoint
+
+    pg_ddl = str(CreateTable(ReferencePoint.__table__).compile(dialect=postgresql.dialect()))
+    assert "CREATE TABLE reference_points" in pg_ddl
+    assert "district VARCHAR(64)" in pg_ddl
+    assert "lat FLOAT" in pg_ddl
+
+    sqlite_ddl = str(CreateTable(ReferencePoint.__table__).compile(dialect=sqlite.dialect()))
+    assert "CREATE TABLE reference_points" in sqlite_ddl
+    assert "district VARCHAR(64)" in sqlite_ddl
+
+
+def test_get_districts_endpoint(client):
+    """GET /api/districts returns list of Andhra Pradesh district reference points."""
+    response = client.get("/api/districts")
+    assert response.status_code == 200
+    data = response.json()
+    assert isinstance(data, list)
+    if len(data) > 0:
+        first = data[0]
+        assert "district" in first
+        assert "lat" in first
+        assert "lon" in first
+        assert "source" in first
+        assert isinstance(first["lat"], float)
+        assert isinstance(first["lon"], float)
+
+
+def test_geo_ap_bounding_box():
+    """Verify approximate Andhra Pradesh bounding box check."""
+    from backend.geo import is_in_andhra_pradesh, check_ap_bounding_box
+
+    # Inside AP coordinates
+    assert is_in_andhra_pradesh(16.5074, 80.6466) is True  # Vijayawada
+    assert is_in_andhra_pradesh(13.6355, 79.4199) is True  # Tirupati
+    assert check_ap_bounding_box(17.6801, 83.2016) is True  # Visakhapatnam
+    assert check_ap_bounding_box(14.6778, 77.6081) is True  # Ananthapuramu
+
+    # Outside AP coordinates
+    assert is_in_andhra_pradesh(28.6139, 77.2090) is False  # New Delhi
+    assert is_in_andhra_pradesh(19.0760, 72.8777) is False  # Mumbai
+    assert check_ap_bounding_box(51.5074, -0.1278) is False  # London
+
+
+def test_geo_nearest_point():
+    """Verify nearest_point helper calculates correct distances and nearest district."""
+    from backend.geo import nearest_point, haversine_distance_km
+
+    mock_points = [
+        {"district": "NTR", "lat": 16.5074, "lon": 80.6466, "source": "open-meteo"},
+        {"district": "Visakhapatnam", "lat": 17.6801, "lon": 83.2016, "source": "open-meteo"},
+        {"district": "Tirupati", "lat": 13.6355, "lon": 79.4199, "source": "open-meteo"},
+    ]
+
+    # Location very close to Vijayawada
+    res = nearest_point(16.51, 80.65, points=mock_points)
+    assert res is not None
+    assert res["district"] == "NTR"
+    assert res["distance_km"] < 10.0
+
+    # Location near Visakhapatnam
+    res_vizag = nearest_point(17.70, 83.22, points=mock_points)
+    assert res_vizag is not None
+    assert res_vizag["district"] == "Visakhapatnam"
+    assert res_vizag["distance_km"] < 10.0
+
+    # Test empty candidates
+    assert nearest_point(16.0, 80.0, points=[]) is None
+
+
+def test_ingest_points_mocked_http():
+    """Verify python -m backend.ingest points pipeline using mocked Open-Meteo geocoding API."""
+    from backend.db import create_db_engine, Base, ReferencePoint
+    from backend.ingest import ingest_points, AP_DISTRICTS
+    from sqlalchemy.orm import sessionmaker
+
+    test_engine = create_db_engine("sqlite:///:memory:")
+    Base.metadata.create_all(test_engine)
+    test_session = sessionmaker(bind=test_engine, autoflush=False)
+
+    def mock_geocoding_handler(request: httpx.Request) -> httpx.Response:
+        name_param = request.url.params.get("name", "Unknown")
+        # Return mock AP response for all districts except one failure test
+        if name_param == "FAIL_DISTRICT":
+            return httpx.Response(200, json={"results": []})
+        return httpx.Response(200, json={
+            "results": [{
+                "name": name_param,
+                "latitude": 16.5,
+                "longitude": 80.5,
+                "country_code": "IN",
+                "admin1": "Andhra Pradesh",
+            }]
+        })
+
+    transport = httpx.MockTransport(mock_geocoding_handler)
+    mock_client = httpx.Client(transport=transport, timeout=5.0)
+
+    with test_session() as session:
+        saved, failed = ingest_points(db=session, client=mock_client, verbose=False)
+        assert len(saved) == len(AP_DISTRICTS)
+        assert len(failed) == 0
+
+        # Verify records in database
+        count = session.query(ReferencePoint).count()
+        assert count == len(AP_DISTRICTS)
+        ntr_pt = session.query(ReferencePoint).filter_by(district="NTR").first()
+        assert ntr_pt is not None
+        assert ntr_pt.lat == 16.5
+        assert ntr_pt.source == "open-meteo"

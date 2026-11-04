@@ -5,8 +5,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
-from backend.routers import recommend, history, meta
+from backend.routers import recommend, history, meta, districts
 from backend.routers.history import seed_from_csv
+from backend.db import init_db
 from backend.config import settings
 
 FRONTEND_DIR = str(settings.FRONTEND_DIR)
@@ -17,6 +18,7 @@ async def lifespan(app: FastAPI):
     # load trained models once at startup (not per-request)
     from backend.inference import get_ranker
     get_ranker()
+    init_db()
     seed_from_csv()
     yield
 
@@ -30,6 +32,7 @@ app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"],
 app.include_router(recommend.router)
 app.include_router(history.router)
 app.include_router(meta.router)
+app.include_router(districts.router)
 
 
 @app.get("/")

@@ -20,7 +20,7 @@ We are migrating the crop recommendation system step by step from synthetic demo
 
 - [x] **Chunk 01: Housekeeping & Configuration** - Branch `chunk-01-housekeeping`, `backend/config.py` using `pydantic-settings` (`DATABASE_URL`, `MODEL_DIR`, timeouts), `.env.example`, `.gitignore` entries for `.env` and local DB files, pytest test suite with FastAPI `TestClient` for `/api/meta` and `/api/recommend`.
 - [x] **Chunk 02: PostgreSQL & SQLAlchemy 2 Setup** - PostgreSQL 16 container via `docker-compose.yml`, `psycopg2-binary` driver, `backend/db.py` reading `DATABASE_URL` (default PostgreSQL, SQLite fallback for tests), idempotent CSV seeding of farmer history, and `/api/history` verification for both backends.
-- [ ] **Chunk 03: Andhra Pradesh Spatial & Geocoding Grid** - Geocoding and spatial reference mapping for all Andhra Pradesh districts and mandals.
+- [x] **Chunk 03: Andhra Pradesh Spatial & Geocoding Grid** - Branch `chunk-03-spatial-grid`, `reference_points` table, Open-Meteo geocoding CLI (`python -m backend.ingest points`) resolving all 26 post-2022 district headquarters, `nearest_point` and `is_in_andhra_pradesh` bounding box helpers, and `GET /api/districts` endpoint.
 - [ ] **Chunk 04: ISRIC SoilGrids Integration** - Fetching real soil properties (pH, organic carbon, clay, sand) via key-free ISRIC SoilGrids REST API.
 - [ ] **Chunk 05: Historical Climate Data (2010–Present)** - Historical climate series ingestion via Open-Meteo Archive / NASA POWER APIs.
 - [ ] **Chunk 06: Weather Forecasting Integration** - Ingesting upcoming seasonal weather forecasts via Open-Meteo Forecast API.
@@ -150,6 +150,20 @@ $env:DATABASE_URL="postgresql://postgres:postgres@localhost:5432/crop_db"; pytes
 
 On startup, `backend/routers/history.py` seeds farmer history from `data/farmer_seasons.csv` into the active database idempotently (if `season_logs` table has records, seeding is skipped). Works identically on both PostgreSQL and SQLite.
 
+### 5. Andhra Pradesh District Reference Ingestion
+
+To populate or refresh reference coordinates for all 26 Andhra Pradesh district headquarters via Open-Meteo geocoding API (no API key required):
+```bash
+# Ingest into PostgreSQL in Docker (default)
+python -m backend.ingest points
+
+# Ingest into local SQLite database
+# Linux / macOS:
+DATABASE_URL=sqlite:///backend/app.db python -m backend.ingest points
+# Windows PowerShell:
+$env:DATABASE_URL="sqlite:///backend/app.db"; python -m backend.ingest points
+```
+
 ## Architecture
 
 ```
@@ -214,6 +228,7 @@ curl -X POST http://127.0.0.1:8000/api/recommend ^
 
 curl http://127.0.0.1:8000/api/history/F1001
 curl http://127.0.0.1:8000/api/meta
+curl http://127.0.0.1:8000/api/districts
 ```
 
 Interactive docs: http://127.0.0.1:8000/docs
@@ -240,7 +255,7 @@ crop-recommendation-system/
 |-- data/                       generated CSVs
 |-- ml/                         features + training + ranking pipeline
 |-- models/                     trained artifacts + metadata.json
-|-- backend/                    FastAPI app (routers, db, inference, config)
+|-- backend/                    FastAPI app (routers, db, geo, ingest, inference, config)
 `-- frontend/standalone/        single-file React + Tailwind UI
 ```
 plus `reports/` - generated EDA charts (embedded in the section above).
