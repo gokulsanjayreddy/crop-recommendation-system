@@ -11,3 +11,4 @@ router = APIRouter()
 def get_districts(db: Session = Depends(get_db)):
     """Return all known Andhra Pradesh district reference points."""
     return db.query(ReferencePoint).order_by(ReferencePoint.district).all()
+

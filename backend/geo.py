@@ -87,3 +87,4 @@ def nearest_point(
             }
 
     return best_pt
+
