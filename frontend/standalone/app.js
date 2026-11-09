@@ -14,6 +14,17 @@ function fmtINR(n) {
   return "Rs " + Number(n).toLocaleString("en-IN", { maximumFractionDigits: 0 });
 }
 
+function esc(s) {
+  return String(s).replace(/[&<>"']/g, function (c) {
+    return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+  });
+}
+
+function fmtTime(iso) {
+  var d = new Date(iso);
+  return isNaN(d.getTime()) ? String(iso || "-") : d.toLocaleString();
+}
+
 // ---------------- API ----------------
 function api(path, opts) {
   return fetch(path, opts).then(function (r) {
@@ -22,8 +33,20 @@ function api(path, opts) {
   });
 }
 
+function fetchLiveWeather(district) {
+  return fetch("/api/live-weather?district=" + encodeURIComponent(district))
+    .then(function (r) {
+      return r.json().catch(function () { return {}; }).then(function (body) {
+        if (!r.ok) throw new Error(body.detail || ("API error " + r.status));
+        return body;
+      });
+    });
+}
+
 // ---------------- init ----------------
 window.addEventListener("DOMContentLoaded", function () {
+  $("weatherBtn").addEventListener("click", loadLiveWeather);
+
   api("/api/farmers").then(function (list) {
     FARMERS = list;
     list.forEach(function (f) { NAME_TO_ID[f.farmer_name.toLowerCase()] = f.farmer_id; });
@@ -41,6 +64,10 @@ window.addEventListener("DOMContentLoaded", function () {
     meta.soil_types.forEach(function (t) {
       var o = document.createElement("option"); o.value = t; o.textContent = t;
       $("soilType").appendChild(o);
+    });
+    (meta.live_weather_districts || []).forEach(function (d) {
+      var o = document.createElement("option"); o.value = d; o.textContent = d;
+      $("weatherDistrict").appendChild(o);
     });
 
     // outcome toggle
@@ -96,6 +123,53 @@ function showCropMatches(q) {
   });
 }
 function PREV_CROP_LOCKED() { return false; }
+
+// ---------------- live weather ----------------
+function loadLiveWeather() {
+  var district = $("weatherDistrict").value;
+  if (!district) {
+    $("weatherBody").innerHTML = '<span class="muted">Select a district first.</span>';
+    return;
+  }
+  var btn = $("weatherBtn");
+  btn.disabled = true;
+  btn.textContent = "Loading...";
+  $("weatherBody").innerHTML = '<span class="muted">Loading live weather...</span>';
+  fetchLiveWeather(district).then(renderLiveWeather).catch(function (err) {
+    $("weatherBody").innerHTML = '<div class="err">' + esc(err.message) + "</div>";
+  }).finally(function () {
+    btn.disabled = false;
+    btn.textContent = "Check live weather";
+  });
+}
+
+function renderLiveWeather(data) {
+  var cur = data.current || {};
+  function value(v, suffix) {
+    if (v === null || v === undefined || v === "") return "-";
+    var n = Number(v);
+    return isNaN(n) ? "-" : n.toFixed(1) + suffix;
+  }
+  $("weatherBody").innerHTML =
+    '<div class="weather-card">' +
+      '<div class="row-between">' +
+        '<div><b>' + esc(data.location || "Andhra Pradesh") + "</b>" +
+          '<div class="weather-meta" style="margin-top:2px">' +
+            esc(data.timezone || "Asia/Kolkata") + "</div></div>" +
+        '<div class="weather-meta" style="margin-top:0">as of ' +
+          esc(fmtTime(data.fetched_at)) + "</div>" +
+      "</div>" +
+      '<div class="weather-grid">' +
+        '<div class="weather-stat"><span class="label">Temperature</span>' +
+          '<div class="value">' + value(cur.temperature_c, "&deg;C") + "</div></div>" +
+        '<div class="weather-stat"><span class="label">Humidity</span>' +
+          '<div class="value">' + value(cur.humidity_pct, "%") + "</div></div>" +
+        '<div class="weather-stat"><span class="label">Rain</span>' +
+          '<div class="value">' + value(cur.precipitation_mm, " mm") + "</div></div>" +
+      "</div>" +
+      '<div class="weather-meta">Source: ' + esc(data.source || "open-meteo") + "</div>" +
+    "</div>";
+}
 
 function showFarmerMatches(q) {
   var box = $("farmerList");

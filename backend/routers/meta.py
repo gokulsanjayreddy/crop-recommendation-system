@@ -2,6 +2,7 @@ from fastapi import APIRouter
 import os
 import pandas as pd
 from backend.inference import get_ranker
+from backend.services.weather import district_names
 
 router = APIRouter()
 
@@ -27,4 +28,5 @@ def meta():
     crops = [{"crop_name": r["crop_name"], "crop_family": r["crop_family"],
               "season": r["season"]} for _, r in master.iterrows()]
     return {"soil_types": sorted(locs["soil_type"].unique().tolist()),
-            "states": states, "crops": crops}
+            "states": states, "crops": crops,
+            "live_weather_districts": district_names()}

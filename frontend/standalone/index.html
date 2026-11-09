@@ -64,6 +64,15 @@
   .pill.profit { background: #dcfce7; color: #15803d; }
   .pill.loss { background: #fee2e2; color: #b91c1c; }
   .muted { color: #9ca3af; font-size: 14px; }
+  .weather-controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 12px; }
+  .weather-controls select { max-width: 300px; }
+  .weather-card { border: 1px solid #e5e7eb; border-radius: 10px; padding: 16px; background: #f8fafc; }
+  .weather-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 12px; }
+  @media (max-width: 640px) { .weather-grid { grid-template-columns: 1fr; } }
+  .weather-stat { background: #fff; border: 1px solid #eef2f7; border-radius: 8px; padding: 12px; text-align: center; }
+  .weather-stat .label { display: block; font-size: 11px; letter-spacing: .5px; text-transform: uppercase; color: #6b7280; }
+  .weather-stat .value { font-size: 22px; font-weight: 800; color: #166534; }
+  .weather-meta { color: #9ca3af; font-size: 12px; margin-top: 10px; }
   footer { max-width: 1000px; margin: 0 auto; padding: 0 16px 24px; color: #9ca3af; font-size: 12px; }
 </style>
 </head>
@@ -100,6 +109,15 @@
     </form>
   </section>
 
+  <section id="weather-section">
+    <h2>Live weather</h2>
+    <div class="weather-controls">
+      <select id="weatherDistrict"><option value="">Select Andhra Pradesh district...</option></select>
+      <button type="button" class="btn-small btn-view" id="weatherBtn">Check live weather</button>
+    </div>
+    <div id="weatherBody" class="muted">Select a district to see current temperature, humidity and rain.</div>
+  </section>
+
   <section id="results-section" style="display:none">
     <h2>Recommended crops for next season</h2>
     <div id="resultsTime" class="muted" style="font-size:12px;margin-bottom:10px"></div>
@@ -122,6 +140,6 @@
 <footer>Demo only - soil, weather and market data are synthetically generated.
 Swap in Soil Health Card, IMD and Agmarknet feeds for production use.</footer>
 
-<script src="/app.js?v=3"></script>
+<script src="/app.js?v=4"></script>
 </body>
 </html>

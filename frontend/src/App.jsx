@@ -3,6 +3,7 @@ import { fetchMeta } from './api'
 import InputForm from './components/InputForm'
 import RecommendationCards from './components/RecommendationCards'
 import HistoryPanel from './components/HistoryPanel'
+import LiveWeatherCard from './components/LiveWeatherCard'
 
 export default function App() {
   const [meta, setMeta] = useState(null)
@@ -51,6 +52,8 @@ export default function App() {
             <InputForm meta={meta} onResult={handleResult} />
           </section>
         )}
+
+        {meta && <LiveWeatherCard districts={meta.live_weather_districts || []} />}
 
         {result && (
           <RecommendationCards data={result} />

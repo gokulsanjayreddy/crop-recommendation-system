@@ -34,3 +34,12 @@ export async function logSeason(record) {
   if (!res.ok) throw new Error('Failed to log season')
   return res.json()
 }
+
+export async function fetchLiveWeather(district) {
+  const res = await fetch(`${BASE}/api/live-weather?district=${encodeURIComponent(district)}`)
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error(err.detail || 'Failed to load live weather')
+  }
+  return res.json()
+}

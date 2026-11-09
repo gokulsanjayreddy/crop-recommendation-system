@@ -46,3 +46,29 @@ class SeasonLogOut(SeasonLogIn):
 
     class Config:
         from_attributes = True
+
+
+class LiveWeatherCurrent(BaseModel):
+    time: str
+    temperature_c: Optional[float] = None
+    humidity_pct: Optional[float] = None
+    precipitation_mm: Optional[float] = None
+
+
+class LiveWeatherDaily(BaseModel):
+    date: str
+    temperature_max_c: Optional[float] = None
+    temperature_min_c: Optional[float] = None
+    precipitation_mm: Optional[float] = None
+
+
+class LiveWeatherResponse(BaseModel):
+    location: str
+    district: Optional[str] = None
+    latitude: float
+    longitude: float
+    timezone: str
+    current: LiveWeatherCurrent
+    daily: List[LiveWeatherDaily]
+    source: str
+    fetched_at: str
