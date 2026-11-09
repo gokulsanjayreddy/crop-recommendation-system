@@ -14,6 +14,23 @@ cultivation, net profit per acre and a plain-language reason.
 > ranking API -> UI). The numbers it produces are illustrative only and should
 > not be used for real farming decisions.
 
+## Migration status
+
+We are migrating the crop recommendation system step by step from synthetic demo data to real, key-free public data for all of Andhra Pradesh, with history from 2010.
+
+- [x] **Chunk 01: Housekeeping & Configuration** - Branch `chunk-01-housekeeping`, `backend/config.py` using `pydantic-settings` (`DATABASE_URL`, `MODEL_DIR`, timeouts), `.env.example`, `.gitignore` entries for `.env` and local DB files, pytest test suite with FastAPI `TestClient` for `/api/meta` and `/api/recommend`.
+- [x] **Chunk 02: PostgreSQL & SQLAlchemy 2 Setup** - PostgreSQL 16 container via `docker-compose.yml`, `psycopg2-binary` driver, `backend/db.py` reading `DATABASE_URL` (default PostgreSQL, SQLite fallback for tests), idempotent CSV seeding of farmer history, and `/api/history` verification for both backends.
+- [x] **Chunk 03: Andhra Pradesh Spatial & Geocoding Grid** - Branch `chunk-03-spatial-grid`, `reference_points` table, Open-Meteo geocoding CLI (`python -m backend.ingest points`) resolving all 26 post-2022 district headquarters, `nearest_point` and `is_in_andhra_pradesh` bounding box helpers, and `GET /api/districts` endpoint.
+- [ ] **Chunk 04: ISRIC SoilGrids Integration** - Fetching real soil properties (pH, organic carbon, clay, sand) via key-free ISRIC SoilGrids REST API.
+- [ ] **Chunk 05: Historical Climate Data (2010–Present)** - Historical climate series ingestion via Open-Meteo Archive / NASA POWER APIs.
+- [ ] **Chunk 06: Weather Forecasting Integration** - Ingesting upcoming seasonal weather forecasts via Open-Meteo Forecast API.
+- [ ] **Chunk 07: Market Price & Mandi Trends** - Ingestion of historical mandi prices and cost of cultivation for Andhra Pradesh crops.
+- [ ] **Chunk 08: Unified Feature Engineering Pipeline** - Transforming and merging real soil, climate, and mandi price data from 2010 into model features.
+- [ ] **Chunk 09: Model Retraining - Stage 1 (Agro-Climatic Suitability)** - Train and evaluate binary suitability model on real Andhra Pradesh data.
+- [ ] **Chunk 10: Model Retraining - Stage 2a (Yield Prediction)** - Train and evaluate yield regression model on Andhra Pradesh harvest history.
+- [ ] **Chunk 11: Model Retraining - Stage 2b (Market Price Forecasting)** - Train and evaluate price forecasting model on real mandi price trends.
+- [ ] **Chunk 12: End-to-End System Integration & UI Verification** - Full system verification, Andhra Pradesh district selector integration, and deployment validation.
+
 ## Data exploration (generated charts)
 
 Run `python ml/visualize_data.py` (needs `matplotlib` + `seaborn`, both in
@@ -60,6 +77,9 @@ Soil nutrients, climate and yield correlations used by the models.
 ```bash
 pip install -r requirements.txt
 
+# Start PostgreSQL 16 container (default database for app)
+docker compose up -d
+
 python synthetic_data_generator/generate.py   # 1. generate CSVs into data/
 python ml/train_suitability.py                # 2. train Stage 1
 python ml/train_yield.py                      # 3. train yield model
@@ -73,6 +93,76 @@ python -m uvicorn backend.main:app --port 8000
 Then open **http://127.0.0.1:8000** in your browser.
 (Opening `frontend/standalone/index.html` directly from disk will NOT work -
 the frontend must be served by the backend so it can call `/api/*`.)
+
+## Database & Docker Setup
+
+The application supports both PostgreSQL (default for production/Docker) and SQLite (automatic fallback for unit tests and lightweight local development).
+
+### 1. Run PostgreSQL with Docker Compose
+
+Start the PostgreSQL 16 container:
+```bash
+docker compose up -d
+```
+
+Check container status:
+```bash
+docker compose ps
+```
+
+Stop the database container:
+```bash
+docker compose down
+```
+
+### 2. Database Connection URL
+
+The database connection is configured via `DATABASE_URL` in `backend/config.py` and `backend/db.py`:
+- **Default (PostgreSQL):** `postgresql://postgres:postgres@localhost:5432/crop_db`
+- **Fallback (SQLite):** `sqlite:///backend/app.db` (used automatically during `pytest`)
+
+To run the backend with SQLite instead of PostgreSQL:
+```bash
+# Linux / macOS
+DATABASE_URL=sqlite:///backend/app.db python -m uvicorn backend.main:app --port 8000
+
+# Windows PowerShell
+$env:DATABASE_URL="sqlite:///backend/app.db"; python -m uvicorn backend.main:app --port 8000
+```
+
+### 3. Running Tests
+
+Tests run against SQLite by default:
+```bash
+pytest
+```
+
+To run tests against PostgreSQL running in Docker:
+```bash
+# Linux / macOS
+DATABASE_URL=postgresql://postgres:postgres@localhost:5432/crop_db pytest
+
+# Windows PowerShell
+$env:DATABASE_URL="postgresql://postgres:postgres@localhost:5432/crop_db"; pytest
+```
+
+### 4. Farmer History Seeding
+
+On startup, `backend/routers/history.py` seeds farmer history from `data/farmer_seasons.csv` into the active database idempotently (if `season_logs` table has records, seeding is skipped). Works identically on both PostgreSQL and SQLite.
+
+### 5. Andhra Pradesh District Reference Ingestion
+
+To populate or refresh reference coordinates for all 26 Andhra Pradesh district headquarters via Open-Meteo geocoding API (no API key required):
+```bash
+# Ingest into PostgreSQL in Docker (default)
+python -m backend.ingest points
+
+# Ingest into local SQLite database
+# Linux / macOS:
+DATABASE_URL=sqlite:///backend/app.db python -m backend.ingest points
+# Windows PowerShell:
+$env:DATABASE_URL="sqlite:///backend/app.db"; python -m backend.ingest points
+```
 
 ## Architecture
 
@@ -95,10 +185,11 @@ the frontend must be served by the backend so it can call `/api/*`.)
 +----------------------------------------------------------------------+
 | 3. BACKEND / API LAYER (FastAPI)                                     |
 |    backend/main.py            app entrypoint, serves frontend at "/" |
+|    backend/config.py          pydantic-settings (DB, model dir, timeouts) |
 |    backend/routers/recommend.py  POST /api/recommend                 |
 |    backend/routers/history.py    GET/POST /api/history               |
 |    backend/routers/meta.py       GET /api/meta                       |
-|    backend/db.py              SQLite via SQLAlchemy (Postgres-ready) |
+|    backend/db.py              SQLite / Postgres persistence          |
 |    backend/inference.py       loads models once at startup           |
 +----------------------------------------------------------------------+
 | 4. FRONTEND LAYER                                                    |
@@ -137,6 +228,7 @@ curl -X POST http://127.0.0.1:8000/api/recommend ^
 
 curl http://127.0.0.1:8000/api/history/F1001
 curl http://127.0.0.1:8000/api/meta
+curl http://127.0.0.1:8000/api/districts
 ```
 
 Interactive docs: http://127.0.0.1:8000/docs
@@ -154,13 +246,16 @@ Interactive docs: http://127.0.0.1:8000/docs
 ```
 crop-recommendation-system/
 |-- README.md
+|-- docker-compose.yml          PostgreSQL 16 service definition
 |-- requirements.txt
+|-- .env.example                configuration template
 |-- run.bat                     one-click launcher (Windows)
+|-- tests/                      pytest test suite (FastAPI TestClient)
 |-- synthetic_data_generator/generate.py
 |-- data/                       generated CSVs
 |-- ml/                         features + training + ranking pipeline
 |-- models/                     trained artifacts + metadata.json
-|-- backend/                    FastAPI app (routers, db, inference)
+|-- backend/                    FastAPI app (routers, db, geo, ingest, inference, config)
 `-- frontend/standalone/        single-file React + Tailwind UI
 ```
 plus `reports/` - generated EDA charts (embedded in the section above).

@@ -1,6 +1,6 @@
 """Pydantic request/response models."""
 from typing import Optional, List
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 
 
 class RecommendRequest(BaseModel):
@@ -43,9 +43,7 @@ class SeasonLogIn(BaseModel):
 
 class SeasonLogOut(SeasonLogIn):
     id: int
-
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class LiveWeatherCurrent(BaseModel):
@@ -72,3 +70,12 @@ class LiveWeatherResponse(BaseModel):
     daily: List[LiveWeatherDaily]
     source: str
     fetched_at: str
+
+
+class DistrictOut(BaseModel):
+    id: Optional[int] = None
+    district: str
+    lat: float
+    lon: float
+    source: str = "open-meteo"
+    model_config = ConfigDict(from_attributes=True)

@@ -3,14 +3,19 @@ import os
 import numpy as np
 import pandas as pd
 
-DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "data")
+try:
+    from backend.config import settings
+    DATA_DIR = str(settings.DATA_DIR)
+except Exception:
+    DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "data")
 
 
-def load_data():
+def load_data(data_dir=None):
+    base_dir = str(data_dir or DATA_DIR)
     data = {}
     for name in ["soil_data", "weather_data", "crop_master", "crop_yield_history",
                  "market_prices", "cost_of_cultivation", "farmer_seasons"]:
-        path = os.path.join(DATA_DIR, f"{name}.csv")
+        path = os.path.join(base_dir, f"{name}.csv")
         df = pd.read_csv(path)
         if "ideal_soil_types" in df.columns:
             df["ideal_soil_types"] = df["ideal_soil_types"].apply(eval)

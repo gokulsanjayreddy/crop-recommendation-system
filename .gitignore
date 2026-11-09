@@ -5,6 +5,11 @@ __pycache__/
 .venv/
 venv/
 
+# Environment variables
+.env
+.env.*
+!.env.example
+
 # Generated artifacts (regenerate with generate.py / training scripts)
 data/*.csv
 models/*.pkl
@@ -12,6 +17,13 @@ models/*.pkl
 # Local databases
 backend/app.db
 *.db
+*.sqlite
+*.sqlite3
+
+# Testing & coverage
+.pytest_cache/
+.coverage
+htmlcov/
 
 # Logs / temp
 *.log

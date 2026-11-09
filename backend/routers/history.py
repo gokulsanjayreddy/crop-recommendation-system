@@ -3,6 +3,7 @@ import os
 import pandas as pd
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
+from backend.config import settings
 from backend.db import SessionLocal, SeasonLog, engine, Base
 from backend.schemas import SeasonLogIn, SeasonLogOut
 
@@ -32,16 +33,16 @@ def log_season(log: SeasonLogIn, db: Session = Depends(get_db)):
     return row
 
 
-def seed_from_csv():
-    """Load farmer_seasons.csv into SQLite once (idempotent)."""
-    Base.metadata.create_all(engine)
-    db = SessionLocal()
+def seed_from_csv(target_engine=None, session_factory=None):
+    """Load farmer_seasons.csv into database once (idempotent)."""
+    eng = target_engine or engine
+    session_cls = session_factory or SessionLocal
+    Base.metadata.create_all(eng)
+    db = session_cls()
     try:
         if db.query(SeasonLog).count() > 0:
             return
-        root = os.path.dirname(os.path.dirname(os.path.dirname(
-            os.path.abspath(__file__))))
-        path = os.path.join(root, "data", "farmer_seasons.csv")
+        path = settings.DATA_DIR / "farmer_seasons.csv"
         df = pd.read_csv(path).fillna({"previous_crop": "",
                                        "profit_amount_rs_per_acre": None})
         rows = [SeasonLog(farmer_id=str(r["farmer_id"]),
