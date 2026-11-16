@@ -1,8 +1,9 @@
 """Database configuration and models using SQLAlchemy 2."""
 import os
+from datetime import date
 import sys
 from pathlib import Path
-from sqlalchemy import create_engine, Column, Integer, String, Float
+from sqlalchemy import create_engine, Column, Integer, String, Float, Date, UniqueConstraint
 from sqlalchemy.orm import declarative_base, sessionmaker
 from backend.config import settings
 
@@ -74,6 +75,22 @@ class ReferencePoint(Base):
     lat = Column(Float, nullable=False)
     lon = Column(Float, nullable=False)
     source = Column(String(64), default="open-meteo", nullable=False)
+
+
+class WeatherDaily(Base):
+    __tablename__ = "weather_daily"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    point = Column(String(64), nullable=False)
+    date = Column(Date, nullable=False)
+    tmax = Column(Float, nullable=True)
+    tmin = Column(Float, nullable=True)
+    tmean = Column(Float, nullable=True)
+    rain_mm = Column(Float, nullable=True)
+    humidity = Column(Float, nullable=True)  # relative_humidity_2m_mean
+    et0 = Column(Float, nullable=True)  # et0_fao_evapotranspiration (mm)
+    soil_moisture = Column(Float, nullable=True)  # soil_moisture_0_to_100cm_mean (m3/m3)
+    source = Column(String(64), default="open-meteo", nullable=False)
+    __table_args__ = (UniqueConstraint("point", "date", name="uq_weather_daily_point_date"),)
 
 
 def init_db(target_engine=None):

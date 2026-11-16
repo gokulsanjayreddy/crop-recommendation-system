@@ -22,7 +22,7 @@ We are migrating the crop recommendation system step by step from synthetic demo
 - [x] **Chunk 02: PostgreSQL & SQLAlchemy 2 Setup** - PostgreSQL 16 container via `docker-compose.yml`, `psycopg2-binary` driver, `backend/db.py` reading `DATABASE_URL` (default PostgreSQL, SQLite fallback for tests), idempotent CSV seeding of farmer history, and `/api/history` verification for both backends.
 - [x] **Chunk 03: Andhra Pradesh Spatial & Geocoding Grid** - Branch `chunk-03-spatial-grid`, `reference_points` table, Open-Meteo geocoding CLI (`python -m backend.ingest points`) resolving all 26 post-2022 district headquarters, `nearest_point` and `is_in_andhra_pradesh` bounding box helpers, and `GET /api/districts` endpoint.
 - [ ] **Chunk 04: ISRIC SoilGrids Integration** - Fetching real soil properties (pH, organic carbon, clay, sand) via key-free ISRIC SoilGrids REST API.
-- [ ] **Chunk 05: Historical Climate Data (2010–Present)** - Historical climate series ingestion via Open-Meteo Archive / NASA POWER APIs.
+- [x] **Chunk 05: Historical Climate Data (2010–Present)** - Historical climate series ingestion via Open-Meteo Archive / NASA POWER APIs.
 - [ ] **Chunk 06: Weather Forecasting Integration** - Ingesting upcoming seasonal weather forecasts via Open-Meteo Forecast API.
 - [ ] **Chunk 07: Market Price & Mandi Trends** - Ingestion of historical mandi prices and cost of cultivation for Andhra Pradesh crops.
 - [ ] **Chunk 08: Unified Feature Engineering Pipeline** - Transforming and merging real soil, climate, and mandi price data from 2010 into model features.
@@ -163,6 +163,35 @@ DATABASE_URL=sqlite:///backend/app.db python -m backend.ingest points
 # Windows PowerShell:
 $env:DATABASE_URL="sqlite:///backend/app.db"; python -m backend.ingest points
 ```
+
+### 6. Historical Weather Data Ingestion
+
+To ingest daily historical weather (ERA5 reanalysis) from 2010-01-01 through
+today-6 days for every reference point via the key-free Open-Meteo Archive API
+and print a per-district coverage report:
+```bash
+# Ingest into PostgreSQL in Docker (default)
+python -m backend.ingest weather
+
+# Ingest into local SQLite database
+# Linux / macOS:
+DATABASE_URL=sqlite:///backend/app.db python -m backend.ingest weather
+# Windows PowerShell:
+$env:DATABASE_URL="sqlite:///backend/app.db"; python -m backend.ingest weather
+```
+
+The command:
+- upserts into the `weather_daily` table uniquely keyed by `(point, date)` —
+  re-running adds **no duplicates** and **never overwrites** existing reanalysis
+  rows with forecast data;
+- stores `tmax`, `tmin`, `tmean`, `rain_mm`, `humidity`
+  (`relative_humidity_2m_mean`), plus `et0` (`et0_fao_evapotranspiration`) and
+  `soil_moisture` (`soil_moisture_0_to_100cm_mean`) when the provider supplies them.
+  These variable names were verified against live Open-Meteo archive responses;
+- prints a coverage report per district; districts below 95% daily coverage
+  have their missing dates listed.
+
+Run `python -m backend.ingest points` first so the reference_points table is populated.
 
 ## Architecture
 
